@@ -21,6 +21,7 @@ pub trait RailSystemTrait {
     fn get_cnt_register_value(&self) -> u8;
     fn get_program_slice(&self, start: u8, end: u8) -> &[u8];
     fn get_ram_slice(&self, start: u8, end: u8) -> &[u8];
+    fn set_io_print(&mut self, print: bool);
 }
 
 impl RailSystemTrait for RailSystem {
@@ -43,7 +44,11 @@ impl RailSystemTrait for RailSystem {
     }
 
     fn get_ram_slice(&self, start: u8, end: u8) -> &[u8] {
-        return &self.ram[start as usize .. end as usize]
+        &self.ram[start as usize .. end as usize]
+    }
+
+    fn set_io_print(&mut self, print: bool) {
+        self.registers[15].set_is_io(print);
     }
 }
 
