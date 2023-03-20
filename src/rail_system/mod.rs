@@ -1,5 +1,4 @@
-use std::any::Any;
-use crate::rail_system::rail_instruction::{RailALUInstruction, RailCUInstruction, RailRAMInstruction};
+use crate::rail_system::rail_instruction::RailInstruction;
 use crate::rail_system::rail_instruction_block::RailInstructionBlock;
 use crate::rail_system::rail_register::{BaseRailRegister, RailRegister};
 use crate::rail_system::rail_subsystem::RailSubSystem;
@@ -99,85 +98,80 @@ impl RailSystem {
     }
 
     fn process_alu(&mut self, instruction: &RailInstructionBlock) {
-        let op: Box<dyn Any> = instruction.get_instruction();
+        let op = instruction.get_instruction();
         let arg1 = self.get_arg1_value(&instruction);
         let arg2 = self.get_arg2_value(&instruction);
         let mut noop_flag = false;
-        if  let Some(op_ob) = op.downcast_ref::<RailALUInstruction>() {
-            let res = match op_ob {
-                RailALUInstruction::ADD => arg1.wrapping_add(arg2),
-                RailALUInstruction::SUB => arg1 - arg2,
-                RailALUInstruction::AND => arg1 & arg2,
-                RailALUInstruction::OR  => arg1 | arg2,
-                RailALUInstruction::NOT => !arg1,
-                RailALUInstruction::XOR => arg1 ^ arg2,
-                RailALUInstruction::SHL => arg1 << arg2,
-                RailALUInstruction::SHR => arg1 >> arg2,
-                RailALUInstruction::RANSetSeed => { 0 },  //TODO(),
-                RailALUInstruction::RANNext => { 0 },  //TODO(),
-                RailALUInstruction::NOOP => {
-                    noop_flag = true; 0 // noop
-                },
-                _ => {
-                    noop_flag = true; 0 // noop
-                }
-            };
-
-            if noop_flag {
-                return;
+        let res = match op {
+            RailInstruction::ADD => arg1.wrapping_add(arg2),
+            RailInstruction::SUB => arg1 - arg2,
+            RailInstruction::AND => arg1 & arg2,
+            RailInstruction::OR  => arg1 | arg2,
+            RailInstruction::NOT => !arg1,
+            RailInstruction::XOR => arg1 ^ arg2,
+            RailInstruction::SHL => arg1 << arg2,
+            RailInstruction::SHR => arg1 >> arg2,
+            RailInstruction::RANSetSeed => { 0 },  //TODO(),
+            RailInstruction::RANNext => { 0 },  //TODO(),
+            RailInstruction::NOOP => {
+                noop_flag = true; 0 // noop
+            },
+            _ => {
+                noop_flag = true; 0 // noop
             }
+        };
 
-            let res_reg = &mut self.registers[instruction.get_result() as usize];
-            res_reg.set_value(res);
+        if noop_flag {
+            return;
         }
+
+        let res_reg = &mut self.registers[instruction.get_result() as usize];
+        res_reg.set_value(res);
     }
 
     fn process_ram_stack(&mut self, instruction: &RailInstructionBlock) {
-        let op: Box<dyn Any> = instruction.get_instruction();
+        let op = instruction.get_instruction();
         let source = self.get_arg1_value(instruction);
         let addr = self.get_arg2_value(instruction) as usize;
         let target = instruction.get_ram_target();
         let target_reg = &mut self.registers[target as usize];
-        if  let Some(op_ob) = op.downcast_ref::<RailRAMInstruction>() {
-            match op_ob {
-                RailRAMInstruction::Read  => target_reg.set_value(self.ram[addr]),
-                RailRAMInstruction::Write => self.ram[addr] = self.registers[source as usize].get_value(),
-                RailRAMInstruction::SPop  => { },//TODO(),
-                RailRAMInstruction::SPush => { },//TODO(),
-                RailRAMInstruction::Ret => {
-                    let cnt = self.call_stack.pop().unwrap();
-                    self.get_cnt_register_mut().set_value(cnt)
-                },
-                RailRAMInstruction::Call => {
-                    self.call_stack.push(self.get_cnt_register_value());  //already moved to next in step
-                    self.get_cnt_register_mut().set_value(source)
-                },
-                RailRAMInstruction::None => {} //noop
-            };
-        }
+        match op {
+            RailInstruction::Read  => target_reg.set_value(self.ram[addr]),
+            RailInstruction::Write => self.ram[addr] = self.registers[source as usize].get_value(),
+            RailInstruction::SPop  => { },//TODO(),
+            RailInstruction::SPush => { },//TODO(),
+            RailInstruction::Ret => {
+                let cnt = self.call_stack.pop().unwrap();
+                self.get_cnt_register_mut().set_value(cnt)
+            },
+            RailInstruction::Call => {
+                self.call_stack.push(self.get_cnt_register_value());  //already moved to next in step
+                self.get_cnt_register_mut().set_value(source)
+            },
+            RailInstruction::None => {} //noop
+            _ => { }
+        };
     }
 
     fn process_cu(&mut self, instruction: &RailInstructionBlock) {
-        let op: Box<dyn Any> = instruction.get_instruction();
+        let op = instruction.get_instruction();
         let arg1 = self.get_arg1_value(instruction);
         let arg2 = self.get_arg2_value(instruction);
         let jmp_addr = instruction.get_cu_addr();   // always immediate
 
-        if  let Some(op_ob) = op.downcast_ref::<RailCUInstruction>() {
-            let do_jmp = match op_ob {
-                RailCUInstruction::Equals => arg1 == arg2,
-                RailCUInstruction::NotEquals => arg1 != arg2,
-                RailCUInstruction::LessThan => arg1 < arg2,
-                RailCUInstruction::LessEqualThan => arg1 <= arg2,
-                RailCUInstruction::MoreThan => arg1 > arg2,
-                RailCUInstruction::MoreEqualThan => arg1 >= arg2,
-                RailCUInstruction::TRUE => true,
-                RailCUInstruction::FALSE => false,
-                _ => false
-            };
-            if do_jmp {
-                self.get_cnt_register_mut().set_value(jmp_addr);
-            }
+        let do_jmp = match op {
+            RailInstruction::Equals => arg1 == arg2,
+            RailInstruction::NotEquals => arg1 != arg2,
+            RailInstruction::LessThan => arg1 < arg2,
+            RailInstruction::LessEqualThan => arg1 <= arg2,
+            RailInstruction::MoreThan => arg1 > arg2,
+            RailInstruction::MoreEqualThan => arg1 >= arg2,
+            RailInstruction::TRUE => true,
+            RailInstruction::FALSE => false,
+            _ => false
+        };
+        if do_jmp {
+            self.get_cnt_register_mut().set_value(jmp_addr);
         }
     }
 

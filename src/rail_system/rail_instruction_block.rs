@@ -1,5 +1,5 @@
-use std::any::Any;
-use crate::rail_system::rail_instruction::{NoInstruction, RailALUInstruction, RailCUInstruction, RailPeripheralInstruction, RailRAMInstruction};
+
+use crate::rail_system::rail_instruction::RailInstruction;
 use crate::rail_system::rail_subsystem::RailSubSystem;
 
 pub struct RailInstructionBlock {
@@ -25,14 +25,14 @@ impl RailInstructionBlock {
         }
     }
 
-    pub fn get_instruction(&self) -> Box<dyn Any> {
+    pub fn get_instruction(&self) -> RailInstruction {
         let masked = self.op & 15;
         match self.get_subsystem() {
             RailSubSystem::ALU => self.get_alu_instruction(masked),
             RailSubSystem::CU => self.get_cu_instruction(masked),
             RailSubSystem::RamStack => self.get_ram_instruction(masked),
             RailSubSystem::Peripheral => self.get_peripheral_instruction(masked),
-            _ => Box::new(NoInstruction::None)
+            _ => RailInstruction::None
         }
     }
 
@@ -60,56 +60,56 @@ impl RailInstructionBlock {
         (value & flag) == flag
     }
 
-    pub fn get_alu_instruction(&self, masked: u8) -> Box<RailALUInstruction> {
-        return Box::new(match masked {
-            0 => RailALUInstruction::ADD,
-            1 => RailALUInstruction::SUB,
-            2 => RailALUInstruction::AND,
-            3 => RailALUInstruction::OR,
-            4 => RailALUInstruction::NOT,
-            5 => RailALUInstruction::XOR,
-            6 => RailALUInstruction::SHL,
-            7 => RailALUInstruction::SHR,
+    pub fn get_alu_instruction(&self, masked: u8) -> RailInstruction {
+        match masked {
+            0 => RailInstruction::ADD,
+            1 => RailInstruction::SUB,
+            2 => RailInstruction::AND,
+            3 => RailInstruction::OR,
+            4 => RailInstruction::NOT,
+            5 => RailInstruction::XOR,
+            6 => RailInstruction::SHL,
+            7 => RailInstruction::SHR,
             // 8, 9, 10, 11
-            12 => RailALUInstruction::RANSetSeed,
-            13 => RailALUInstruction::RANNext,
+            12 => RailInstruction::RANSetSeed,
+            13 => RailInstruction::RANNext,
             // 14
-            15 => RailALUInstruction::NOOP,
-            _ => RailALUInstruction::None
-        })
+            15 => RailInstruction::NOOP,
+            _ => RailInstruction::None
+        }
     }
 
-    pub fn get_cu_instruction(&self, masked: u8) -> Box<RailCUInstruction> {
-        Box::new(match masked {
-            0 => RailCUInstruction::Equals,
-            1 => RailCUInstruction::NotEquals,
-            2 => RailCUInstruction::LessThan,
-            3 => RailCUInstruction::LessEqualThan,
-            4 => RailCUInstruction::MoreThan,
-            5 => RailCUInstruction::MoreEqualThan,
-            6 => RailCUInstruction::TRUE,
-            7 => RailCUInstruction::FALSE,
+    pub fn get_cu_instruction(&self, masked: u8) -> RailInstruction {
+        match masked {
+            0 => RailInstruction::Equals,
+            1 => RailInstruction::NotEquals,
+            2 => RailInstruction::LessThan,
+            3 => RailInstruction::LessEqualThan,
+            4 => RailInstruction::MoreThan,
+            5 => RailInstruction::MoreEqualThan,
+            6 => RailInstruction::TRUE,
+            7 => RailInstruction::FALSE,
             // 8 to 15
-            _ => RailCUInstruction::None
-        })
+            _ => RailInstruction::None
+        }
     }
 
-    pub fn get_ram_instruction(&self, masked: u8) -> Box<RailRAMInstruction> {
-        Box::new(match masked {
-            0 => RailRAMInstruction::Read,
-            1 => RailRAMInstruction::Write,
+    pub fn get_ram_instruction(&self, masked: u8) -> RailInstruction {
+        match masked {
+            0 => RailInstruction::Read,
+            1 => RailInstruction::Write,
             // 2 to 7
-            8 => RailRAMInstruction::SPop,
-            9 => RailRAMInstruction::SPush,
-            10 => RailRAMInstruction::Ret,
-            11 => RailRAMInstruction::Call,
+            8 => RailInstruction::SPop,
+            9 => RailInstruction::SPush,
+            10 => RailInstruction::Ret,
+            11 => RailInstruction::Call,
             // 12 to 15
-            _ => RailRAMInstruction::None
-        })
+            _ => RailInstruction::None
+        }
     }
 
-    pub fn get_peripheral_instruction(&self, _masked: u8) -> Box<RailPeripheralInstruction> {
-        Box::new(RailPeripheralInstruction::None)
+    pub fn get_peripheral_instruction(&self, _masked: u8) -> RailInstruction {
+        RailInstruction::None
     }
 
 }
