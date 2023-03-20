@@ -62,19 +62,19 @@ impl RailInstructionBlock {
 
     pub fn get_alu_instruction(&self, masked: u8) -> RailInstruction {
         match masked {
-            0 => RailInstruction::ADD,
-            1 => RailInstruction::SUB,
-            2 => RailInstruction::AND,
-            3 => RailInstruction::OR,
-            4 => RailInstruction::NOT,
-            5 => RailInstruction::XOR,
-            6 => RailInstruction::SHL,
-            7 => RailInstruction::SHR,
+            0 => RailInstruction::Add,
+            1 => RailInstruction::Sub,
+            2 => RailInstruction::And,
+            3 => RailInstruction::Or,
+            4 => RailInstruction::Not,
+            5 => RailInstruction::Xor,
+            6 => RailInstruction::Shl,
+            7 => RailInstruction::Shr,
             // 8, 9, 10, 11
             12 => RailInstruction::RANSetSeed,
             13 => RailInstruction::RANNext,
             // 14
-            15 => RailInstruction::NOOP,
+            15 => RailInstruction::Noop,
             _ => RailInstruction::None
         }
     }
@@ -87,8 +87,8 @@ impl RailInstructionBlock {
             3 => RailInstruction::LessEqualThan,
             4 => RailInstruction::MoreThan,
             5 => RailInstruction::MoreEqualThan,
-            6 => RailInstruction::TRUE,
-            7 => RailInstruction::FALSE,
+            6 => RailInstruction::True,
+            7 => RailInstruction::False,
             // 8 to 15
             _ => RailInstruction::None
         }

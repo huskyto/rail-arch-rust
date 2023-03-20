@@ -31,7 +31,7 @@ impl RailSystemTrait for RailSystem {
     }
 
     fn get_register_value(&self, reg: u8) -> u8 {
-        return self.registers[reg as usize].get_value()
+        self.registers[reg as usize].get_value()
     }
 
     fn get_cnt_register_value(&self) -> u8 {
@@ -39,7 +39,7 @@ impl RailSystemTrait for RailSystem {
     }
 
     fn get_program_slice(&self, start: u8, end: u8) -> &[u8] {
-        return &self.program[start as usize .. end as usize]
+        &self.program[start as usize .. end as usize]
     }
 
     fn get_ram_slice(&self, start: u8, end: u8) -> &[u8] {
@@ -50,14 +50,14 @@ impl RailSystemTrait for RailSystem {
 impl RailSystem {
 
     pub fn new() -> Self {
-        let mut s = Self {
+        let mut new_system = Self {
             registers: [RailRegister::new(); 16],
             ram: [0; 256],
             program: [0; 256],
             call_stack: Vec::new()
         };
-        s.registers[15].set_is_io(true);
-        return s;
+        new_system.registers[15].set_is_io(true);
+        new_system
     }
 
     pub fn new_with_program(program_slice: &[u8]) -> Self {
@@ -99,23 +99,23 @@ impl RailSystem {
 
     fn process_alu(&mut self, instruction: &RailInstructionBlock) {
         let op = instruction.get_instruction();
-        let arg1 = self.get_arg1_value(&instruction);
-        let arg2 = self.get_arg2_value(&instruction);
+        let arg1 = self.get_arg1_value(instruction);
+        let arg2 = self.get_arg2_value(instruction);
         let mut noop_flag = false;
         let res = match op {
-            RailInstruction::ADD => arg1.wrapping_add(arg2),
-            RailInstruction::SUB => arg1 - arg2,
-            RailInstruction::AND => arg1 & arg2,
-            RailInstruction::OR  => arg1 | arg2,
-            RailInstruction::NOT => !arg1,
-            RailInstruction::XOR => arg1 ^ arg2,
-            RailInstruction::SHL => arg1 << arg2,
-            RailInstruction::SHR => arg1 >> arg2,
+            RailInstruction::Add => arg1.wrapping_add(arg2),
+            RailInstruction::Sub => arg1 - arg2,
+            RailInstruction::And => arg1 & arg2,
+            RailInstruction::Or => arg1 | arg2,
+            RailInstruction::Not => !arg1,
+            RailInstruction::Xor => arg1 ^ arg2,
+            RailInstruction::Shl => arg1 << arg2,
+            RailInstruction::Shr => arg1 >> arg2,
             RailInstruction::RANSetSeed => { 0 },  //TODO(),
             RailInstruction::RANNext => { 0 },  //TODO(),
-            RailInstruction::NOOP => {
+            RailInstruction::Noop => {
                 noop_flag = true; 0 // noop
-            },
+            }
             _ => {
                 noop_flag = true; 0 // noop
             }
@@ -166,8 +166,8 @@ impl RailSystem {
             RailInstruction::LessEqualThan => arg1 <= arg2,
             RailInstruction::MoreThan => arg1 > arg2,
             RailInstruction::MoreEqualThan => arg1 >= arg2,
-            RailInstruction::TRUE => true,
-            RailInstruction::FALSE => false,
+            RailInstruction::True => true,
+            RailInstruction::False => false,
             _ => false
         };
         if do_jmp {
