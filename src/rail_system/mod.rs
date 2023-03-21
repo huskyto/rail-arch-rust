@@ -54,9 +54,7 @@ impl RailSystemTrait for RailSystem {
     }
 
     fn load_program(&mut self, program_slice: &[u8]) {
-        for i in 0..program_slice.len() {
-            self.program[i] = program_slice[i];
-        }
+        self.program[..program_slice.len()].copy_from_slice(program_slice);
     }
 }
 
@@ -100,7 +98,7 @@ impl RailSystem {
 
     fn process_instruction(&mut self, instruction: &RailInstructionBlock) {
         match instruction.get_subsystem() {
-            RailSubSystem::ALU => self.process_alu(instruction),
+            RailSubSystem::Alu => self.process_alu(instruction),
             RailSubSystem::RamStack => self.process_ram_stack(instruction),
             RailSubSystem::CU => self.process_cu(instruction),
             RailSubSystem::Peripheral => { }, // todo

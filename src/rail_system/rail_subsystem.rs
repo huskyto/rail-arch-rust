@@ -1,4 +1,4 @@
 
 pub enum RailSubSystem {
-    ALU, RamStack, CU, Peripheral, None
+    Alu, RamStack, CU, Peripheral, None
 }

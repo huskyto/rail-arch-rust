@@ -5,10 +5,10 @@ use crate::rail_assembler::rasm_dictionary::RasmDictionary;
 use crate::rail_assembler::rasm_line::{LineType, RasmLine, RasmTag};
 
 mod rasm_line;
-mod rasm_dictionary;
+pub mod rasm_dictionary;
 
 
-const EMPTY: &'static[&str] = &[];
+const EMPTY: &[&str] = &[];
 const LABEL: &str = "LABEL";
 const CONST: &str = "CONST";
 
@@ -32,14 +32,11 @@ impl RailAssembler {
     }
 
     fn parse_lines(&self, text: &str) -> Vec<RasmLine> {
-        let lines: Vec<&str> = text.split("\n").collect();
+        let lines: Vec<&str> = text.split('\n').collect();
         let mut result: Vec<RasmLine> = Vec::new();
 
-        for i in 0..lines.len() {
-                // code is returned in uppercase
-            let line = lines[i];
+        for line in lines {
             let (code, comment) = self.extract_comment(line);
-
             if code.is_empty() {
                 result.push(RasmLine::new(comment.to_string(), RasmTag::None,
                                           LineType::Empty, EMPTY, EMPTY));
@@ -74,7 +71,7 @@ impl RailAssembler {
     }
 
     fn get_parts(code: &str) -> Vec<&str> {
-        let parts: Vec<&str> = code.split(" ")
+        let parts: Vec<&str> = code.split(' ')
             .map(|cd| cd.trim())
             .filter(|cd| !cd.is_empty())
             .collect();
@@ -109,7 +106,7 @@ impl RailAssembler {
         }
         for line in code_lines {
             for code in &line.code_parts {
-                result.push(self.process_code(&code, &const_map, &label_map));
+                result.push(self.process_code(code, &const_map, &label_map));
             }
         }
 
@@ -119,15 +116,14 @@ impl RailAssembler {
     fn extract_comment(&self, line: &str) -> (String, String) {
         let mut comment = String::new();
         let mut code = String::new();
-        if line.contains("#") {   // has a comment
-            let parts: Vec<&str> = line.split("#").collect();
-            if parts.len() > 0
+        if line.contains('#') {   // has a comment
+            let parts: Vec<&str> = line.split('#').collect();
+            if !parts.is_empty()
             {
                 code.push_str(parts[0].trim());
             }
             if parts.len() > 1 {
                 comment = parts[1].trim().parse().unwrap();
-                // code.push_str(parts[1].trim());
             }
         } else {
             code.push_str(line.trim());
@@ -138,32 +134,30 @@ impl RailAssembler {
 
     fn process_code(&self, code: &str, const_map: &HashMap<&str, &str>, label_map: &HashMap<&str, u8>) -> u8 {
                 // TODO add more arithmetic support
-        let parts: Vec<&str> = code.split("+") .collect();
+        let parts: Vec<&str> = code.split('+') .collect();
         let mut result = 0;
-        for i in 0..parts.len() {
-            let mut real_code: &str = parts[i];
-            let mut num_code = 0;
-
+        for part in parts {
+            let mut real_code: &str = part;
             while const_map.contains_key(real_code) {
                 real_code = const_map[real_code];
             }
-            if label_map.contains_key(real_code) {
-                num_code = label_map[real_code];
+            let num_code: u8 = if label_map.contains_key(real_code) {
+                label_map[real_code]
             }
             else {
                 let trans: (bool, u8) = RasmDictionary::translate(real_code);
-                num_code = if (trans.0) {
+                if trans.0 {
                     trans.1
                 }
                 else {
                     self.decode_num(real_code)
-                };
-            }
+                }
+            };
 
             result += num_code
         }
 
-        return result
+        result
     }
 
     fn decode_num(&self, str: &str) -> u8 {

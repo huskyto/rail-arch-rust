@@ -17,7 +17,7 @@ impl RailInstructionBlock {
 
     pub fn get_subsystem(&self) -> RailSubSystem {
         match (&self.op & 48) >> 4 {
-            0 => RailSubSystem::ALU,
+            0 => RailSubSystem::Alu,
             1 => RailSubSystem::RamStack,
             2 => RailSubSystem::CU,
             3 => RailSubSystem::Peripheral,
@@ -28,7 +28,7 @@ impl RailInstructionBlock {
     pub fn get_instruction(&self) -> RailInstruction {
         let masked = self.op & 15;
         match self.get_subsystem() {
-            RailSubSystem::ALU => self.get_alu_instruction(masked),
+            RailSubSystem::Alu => self.get_alu_instruction(masked),
             RailSubSystem::CU => self.get_cu_instruction(masked),
             RailSubSystem::RamStack => self.get_ram_instruction(masked),
             RailSubSystem::Peripheral => self.get_peripheral_instruction(masked),

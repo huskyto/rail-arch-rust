@@ -1,13 +1,13 @@
 
 #[path = "../src/rail_system/mod.rs"]
-mod rail_system;
+pub mod rail_system;
 #[path = "../src/rail_assembler/mod.rs"]
-mod rail_assembler;
+pub mod rail_assembler;
 
 #[cfg(test)]
 mod tests {
-    use crate::rail_system::{RailSystem, RailSystemTrait};
-    use crate::rail_assembler::{RailAssembler, RailAssemblerTrait};
+    pub use crate::rail_system::{RailSystem, RailSystemTrait};
+    pub use crate::rail_assembler::{RailAssembler, RailAssemblerTrait};
 
     fn load_asm(rs: &mut RailSystem, asm: &str) {
         let rail_assembler = RailAssembler::new();
