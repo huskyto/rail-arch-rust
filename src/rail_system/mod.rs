@@ -22,6 +22,8 @@ pub trait RailSystemTrait {
     fn get_program_slice(&self, start: u8, end: u8) -> &[u8];
     fn get_ram_slice(&self, start: u8, end: u8) -> &[u8];
     fn set_io_print(&mut self, print: bool);
+
+    fn load_program(&mut self, program_slice: &[u8]);
 }
 
 impl RailSystemTrait for RailSystem {
@@ -50,6 +52,12 @@ impl RailSystemTrait for RailSystem {
     fn set_io_print(&mut self, print: bool) {
         self.registers[15].set_is_io(print);
     }
+
+    fn load_program(&mut self, program_slice: &[u8]) {
+        for i in 0..program_slice.len() {
+            self.program[i] = program_slice[i];
+        }
+    }
 }
 
 impl RailSystem {
@@ -67,10 +75,7 @@ impl RailSystem {
 
     pub fn new_with_program(program_slice: &[u8]) -> Self {
         let mut new_system = Self::new();
-        for i in 0..program_slice.len() {
-            new_system.program[i] = program_slice[i];
-        }
-        // new_system.program[..program_slice.len()].copy_from_slice(program_slice);
+        new_system.load_program(program_slice);
         new_system
     }
 
