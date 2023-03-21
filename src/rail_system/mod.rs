@@ -66,11 +66,12 @@ impl RailSystem {
     }
 
     pub fn new_with_program(program_slice: &[u8]) -> Self {
-        let mut s = Self::new();
+        let mut new_system = Self::new();
         for i in 0..program_slice.len() {
-            s.program[i] = program_slice[i];
+            new_system.program[i] = program_slice[i];
         }
-        return s;
+        // new_system.program[..program_slice.len()].copy_from_slice(program_slice);
+        new_system
     }
 
     fn get_cnt_register(&self) -> &RailRegister {
@@ -109,7 +110,7 @@ impl RailSystem {
         let mut noop_flag = false;
         let res = match op {
             RailInstruction::Add => arg1.wrapping_add(arg2),
-            RailInstruction::Sub => arg1 - arg2,
+            RailInstruction::Sub => arg1.wrapping_sub(arg2),
             RailInstruction::And => arg1 & arg2,
             RailInstruction::Or => arg1 | arg2,
             RailInstruction::Not => !arg1,
