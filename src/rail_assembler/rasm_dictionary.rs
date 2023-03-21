@@ -37,6 +37,8 @@ impl RasmDictionary {
             "RAN_SS" => 0x0C,
             "RAN_NEXT" => 0x0D,
 
+            "NOOP" => 0x0F,
+
                 // CU //
             "IF_EQ" => 0x20,
             "IF_N_EQ" => 0x21,
