@@ -161,17 +161,17 @@ impl RailAssembler {
     }
 
     fn decode_num(&self, str: &str) -> u8 {
-        if str.starts_with("0X") {
-            u8::from_str_radix(&str[2..], 16).unwrap()
+        if let Some(value) = str.strip_prefix("0X") {
+            u8::from_str_radix(value, 16).unwrap()
         }
-        else if str.starts_with("0O") {
-            u8::from_str_radix(&str[2..], 8).unwrap()
+        else if let Some(value) = str.strip_prefix("0O") {
+            u8::from_str_radix(value, 8).unwrap()
         }
-        else if str.starts_with("0B") {
-            u8::from_str_radix(&str[2..], 2).unwrap()
+        else if let Some(value) = str.strip_prefix("0B") {
+            u8::from_str_radix(value, 2).unwrap()
         }
         else {
-            u8::from_str_radix(str, 10).unwrap()
+            str.parse::<u8>().unwrap()  // base10
         }
     }
 

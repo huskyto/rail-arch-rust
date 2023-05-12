@@ -58,27 +58,27 @@ impl RailTerminalUI {
                 0..=7 =>
                     vec![
                         Span::raw(format!("R{}:  ", i)),
-                        Span::styled(format!("{}", Self::hex_str(value)), Style::default().fg(Color::Blue)),
+                        Span::styled(Self::hex_str(value), Style::default().fg(Color::Blue)),
                     ],
                 8 => vec![
                     Span::raw("BZ0: "),
-                    Span::styled(format!("{}", Self::hex_str(value)), Style::default().fg(Color::Blue)),
+                    Span::styled(Self::hex_str(value), Style::default().fg(Color::Blue)),
                 ],
                 9 => vec![
                     Span::raw("LV0: "),
-                    Span::styled(format!("{}", Self::hex_str(value)), Style::default().fg(Color::Blue)),
+                    Span::styled(Self::hex_str(value), Style::default().fg(Color::Blue)),
                 ],
                 10..=13 => vec![
                     Span::raw(format!("D{}: ", i)),
-                    Span::styled(format!("{}", Self::hex_str(value)), Style::default().fg(Color::Blue)),
+                    Span::styled(Self::hex_str(value), Style::default().fg(Color::Blue)),
                 ],
                 14 => vec![
                     Span::raw("CNT: "),
-                    Span::styled(format!("{}", Self::hex_str(value)), Style::default().fg(Color::Green)),
+                    Span::styled(Self::hex_str(value), Style::default().fg(Color::Green)),
                 ],
                 15 => vec![
                     Span::raw("IO:  "),
-                    Span::styled(format!("{}", Self::hex_str(value)), Style::default().fg(Color::Yellow)),
+                    Span::styled(Self::hex_str(value), Style::default().fg(Color::Yellow)),
                 ],
                 _ => vec! [Span::raw("")],
             };
@@ -115,11 +115,11 @@ impl RailTerminalUI {
         for line in 0..32 {
             let slice_left = self.rail_system.get_ram_slice(line * 4, (line * 4) + 3);
             let slice_right = self.rail_system.get_ram_slice((line * 4) + 128, (line * 4) + 3 + 128);
-            let mut line_vec = Vec::new();
-            line_vec.push(Span::raw(" ".repeat(4)));   // left pad
-            line_vec.push(Self::make_span(false, slice_left));
-            line_vec.push(Span::raw(" ".repeat(3)));   // middle pad
-            line_vec.push(Self::make_span(false, slice_right));
+            let line_vec = vec![
+                Span::raw(" ".repeat(4)),  // left pad
+                Self::make_span(false, slice_left),
+                Span::raw(" ".repeat(3)),   // middle pad
+                Self::make_span(false, slice_right)];
 
             spans.push(Spans::from(line_vec));
         }
