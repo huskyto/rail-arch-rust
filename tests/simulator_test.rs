@@ -43,7 +43,7 @@ mod tests {
         load_asm(&mut system,
                  "ADD+IM2 0 1 R1"
         );
-        assert_eq!(system.get_program_slice(0, 4), &[0x40, 0x00, 0x01, 0x01]);
+        assert_eq!(system.get_program_slice(0, 3), &[0x40, 0x00, 0x01, 0x01]);
     }
 
     #[test]
@@ -67,7 +67,7 @@ mod tests {
         system.step();
         system.step();
         system.step();
-        assert_eq!(system.get_ram_slice(0, 6), &[0x00, 0x01, 0x02, 0x03, 0x00, 0x00]);
+        assert_eq!(system.get_ram_slice(0, 5), &[0x00, 0x01, 0x02, 0x03, 0x00, 0x00]);
     }
 
     #[test]
@@ -78,6 +78,25 @@ mod tests {
         );
         system.step();
         system.set_io_print(true);
+    }
+
+    #[test]
+    fn test_xor_shift_rng() {
+        let mut system = RailSystem::new();
+        load_asm(&mut system,
+                 r#"RAN_SS+IM1 29 0 0
+                        RAN_NEXT 0 0 R1
+                        JMP 0 0 4"#
+        );
+        let mut outs: Vec<u8> = Vec::new();
+        system.step();
+        for _ in 0..8 {
+            system.step();
+            outs.push(system.get_register_value(1));
+            system.step();
+        }
+
+        assert_eq!(outs, &[56, 119, 225, 159, 108, 213, 241, 189]);
     }
 
 }
