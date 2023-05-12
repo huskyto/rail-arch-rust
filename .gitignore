@@ -1,2 +1,6 @@
 /target
 .idea
+.vscode
+*.svg
+*.asm
+*.bin
