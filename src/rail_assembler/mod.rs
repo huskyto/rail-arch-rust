@@ -161,7 +161,6 @@ impl RailAssembler {
     }
 
     fn decode_num(&self, str: &str) -> u8 {
-            // TODO transform according to prefix: 0x, 0o, 0b
         if str.starts_with("0X") {
             u8::from_str_radix(&str[2..], 16).unwrap()
         }
