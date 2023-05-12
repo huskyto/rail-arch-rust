@@ -2,7 +2,12 @@
 
 This project is a simulator for the simple 8-bit Rail architecture. The Rail architecture is not intended to be a serious architecture and was created just for fun and learning purposes.
 
-The simulator is implemented in Rust, and as I'm still learning the language, it might lack best practices and might not be idiomatic Rust code. The Rust implementation is based on a previous Kotlin implementation.
+The simulator is implemented in Rust, and as I'm still learning the language, it might lack best practices and might not be idiomatic Rust code.
+
+To get a better understanding of the architecture and its ASM, please feel free to check the definition documents here: [Rail Architecture](https://github.com/huskyto/rail-arch-definition). I have tried to make it as simple as possible, but I'm open to suggestions on how to improve it.
+
+You can also check out the Kotlin implementation of the simulator here: 
+[Kotlin Simulator](https://github.com/huskyto/rail-arch-kt)
 
 ## Contributing
 
