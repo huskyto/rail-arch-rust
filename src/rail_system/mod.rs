@@ -12,7 +12,8 @@ pub struct RailSystem {
     registers: [RailRegister; 16],
     ram: [u8; 256],
     program: [u8; 256],
-    call_stack: Vec<u8>
+    call_stack: Vec<u8>,
+    ran_seed: u8
 }
 
 pub trait RailSystemTrait {
@@ -42,11 +43,11 @@ impl RailSystemTrait for RailSystem {
     }
 
     fn get_program_slice(&self, start: u8, end: u8) -> &[u8] {
-        &self.program[start as usize .. end as usize]
+        &self.program[start as usize ..=end as usize]
     }
 
     fn get_ram_slice(&self, start: u8, end: u8) -> &[u8] {
-        &self.ram[start as usize .. end as usize]
+        &self.ram[start as usize ..=end as usize]
     }
 
     fn set_io_print(&mut self, print: bool) {
@@ -65,7 +66,8 @@ impl RailSystem {
             registers: [RailRegister::new(); 16],
             ram: [0; 256],
             program: [0; 256],
-            call_stack: Vec::new()
+            call_stack: Vec::new(),
+            ran_seed: 0
         };
         new_system.registers[15].set_is_io(true);
         new_system
@@ -120,8 +122,11 @@ impl RailSystem {
             RailInstruction::Xor => arg1 ^ arg2,
             RailInstruction::Shl => arg1 << arg2,
             RailInstruction::Shr => arg1 >> arg2,
-            RailInstruction::RANSetSeed => { 0 },  //TODO(),
-            RailInstruction::RANNext => { 0 },  //TODO(),
+            RailInstruction::RANSetSeed => {
+                self.ran_set_seed(arg1);
+                noop_flag = true; 0 // should not update anything
+            },
+            RailInstruction::RANNext => self.ran_next(),
             RailInstruction::Noop => {
                 noop_flag = true; 0 // noop
             }
@@ -136,6 +141,17 @@ impl RailSystem {
 
         let res_reg = &mut self.registers[instruction.get_result() as usize];
         res_reg.set_value(res);
+    }
+
+    fn ran_set_seed(&mut self, seed: u8) {
+        self.ran_seed = seed;
+    }
+
+    fn ran_next(&mut self) -> u8 {
+        let tmp1 = self.ran_seed ^ (self.ran_seed >> 1);
+        let tmp2 = tmp1 ^ (tmp1 << 1);
+        self.ran_seed = tmp2 ^ (tmp2 >> 2);
+        self.ran_seed
     }
 
     fn process_ram_stack(&mut self, instruction: &RailInstructionBlock) {
