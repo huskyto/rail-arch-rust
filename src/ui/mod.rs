@@ -4,7 +4,7 @@ use std::io;
 
 use tui::Frame;
 use tui::backend::CrosstermBackend;
-use tui::layout::{Constraint, Direction, Layout};
+use tui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Style};
 use tui::text::{Span, Spans};
 use tui::widgets::{Block, Borders, Paragraph};
@@ -24,6 +24,148 @@ impl RailTerminalUI {
     }
 
     pub fn draw(&self, frame: &mut Frame<CrosstermBackend<io::Stdout>>) {
+        let rows = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(
+                [
+                    Constraint::Length(5),
+                    Constraint::Percentage(10),
+                    Constraint::Percentage(70)
+                ].as_ref()
+            ).split(frame.size());
+
+        self.draw_header(frame, rows[0]);
+        self.draw_widgets(frame, rows[1]);
+        self.draw_content(frame, rows[2]);
+    }
+
+    fn draw_header(&self, frame: &mut Frame<CrosstermBackend<io::Stdout>>, area: Rect) {
+        let spans = vec![
+            Spans::from("    ___       _ __  ___           __ "),
+            Spans::from("   / _ \\___ _(_) / / _ | ________/ / "),
+            Spans::from("  / , _/ _ `/ / / / __ |/ __/ __/ _ \\"),
+            Spans::from(" /_/|_|\\_,_/_/_/ /_/ |_/_/  \\__/_//_/"),
+            Spans::from(""),
+        ];
+        let block = Paragraph::new(spans)
+            .alignment(Alignment::Center)
+            .block(Block::default()
+                .borders(Borders::BOTTOM));
+
+        frame.render_widget(block, area);
+    }
+
+    fn draw_widgets(&self, frame: &mut Frame<CrosstermBackend<io::Stdout>>, area: Rect) {
+        let columns = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(
+                [
+                    Constraint::Percentage(50),
+                    Constraint::Percentage(50)
+                ].as_ref()
+            ).split(area);
+
+        self.draw_level(frame, columns[0]);
+
+        let display_columns = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(
+                [
+                    Constraint::Percentage(25),
+                    Constraint::Percentage(25),
+                    Constraint::Percentage(25),
+                    Constraint::Percentage(25)
+                ].as_ref()
+            ).split(columns[1]);
+
+        for d_reg_num in 10..14 {
+            self.draw_7_seg(frame, display_columns[d_reg_num - 10],
+                            self.rail_system.get_register_value(d_reg_num as u8));
+        }
+    }
+
+    fn draw_7_seg(&self, frame: &mut Frame<CrosstermBackend<io::Stdout>>, area: Rect, value: u8) {
+        let segments = Self::get_segs_for_byte(value);
+
+        let spans = vec![
+            Spans::from(Span::styled(segments[0].clone(), Style::default().fg(Color::Red))),
+            Spans::from(Span::styled(segments[1].clone(), Style::default().fg(Color::Red))),
+            Spans::from(Span::styled(segments[2].clone(), Style::default().fg(Color::Red)))
+        ];
+        let block = Paragraph::new(spans)
+            .alignment(Alignment::Center)
+            .block(Block::default());
+
+        frame.render_widget(block, area);
+    }
+
+    fn get_segs_for_byte(value: u8) -> Vec<String> {
+        let high_nibble = (value >> 4) & 0x0F;
+        let low_nibble = value & 0x0F;
+        let high_segs = Self::get_segs_for_nibble(high_nibble);
+        let low_segs = Self::get_segs_for_nibble(low_nibble);
+        vec![
+                format!("{} {}", high_segs[0], low_segs[0]),
+                format!("{} {}", high_segs[1], low_segs[1]),
+                format!("{} {}", high_segs[2], low_segs[2])
+            ]
+    }
+
+    const SEGS: [&'static str; 3] = [
+        " _     _  _     _  _  _  _  _  _     _     _  _    ",
+        "| |  | _| _||_||_ |_   ||_||_||_||_ |   _||_ |_    ",
+        "|_|  ||_  _|  | _||_|  ||_| _|| ||_||_ |_||_ |     "
+    ];
+
+    const CIRC_OFF: &'static str = "○";
+    const CIRC_ON: &'static str = "●";
+    const CIRC_SEPARATOR: &'static str = "  ";
+
+    fn get_segs_for_nibble<'a>(nibble: u8) -> Vec<&'a str> {
+        let offset = (std::cmp::min(16, nibble) * 3) as usize;
+        vec![
+                &Self::SEGS[0][offset..offset + 3],
+                &Self::SEGS[1][offset..offset + 3],
+                &Self::SEGS[2][offset..offset + 3]
+            ]
+    }
+
+    fn draw_level(&self, frame: &mut Frame<CrosstermBackend<io::Stdout>>, area: Rect) {
+        let mut spans = Vec::new();
+        let reg_val = self.rail_system.get_register_value(9);
+        for pos in 0..8 {
+            if Self::is_bit_pos_on(reg_val, pos as usize) {
+                spans.push(Span::styled(Self::CIRC_ON,
+                                Style::default().fg(Color::LightGreen)));
+                spans.push(Span::raw(Self::CIRC_SEPARATOR));
+            }
+            else {
+                spans.push(Span::styled(Self::CIRC_OFF,
+                                                    Style::default().fg(Color::DarkGray)));
+                spans.push(Span::raw(Self::CIRC_SEPARATOR));
+            }
+        }
+
+        let spans = vec![
+            Spans::from(""),
+            Spans::from(spans),
+            Spans::from("")
+        ];
+
+        let block = Paragraph::new(spans)
+            .alignment(Alignment::Center)
+            .block(Block::default());
+
+        frame.render_widget(block, area);
+    }
+
+    fn is_bit_pos_on(value: u8, pos: usize) -> bool {
+        let mask = 1 << (7 - pos);
+        value & mask > 0
+    }
+
+    fn draw_content(&self, frame: &mut Frame<CrosstermBackend<io::Stdout>>, area: Rect) {
+            // TODO check if content will not fit and display somehow
         let columns = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(
@@ -32,7 +174,7 @@ impl RailTerminalUI {
                     Constraint::Percentage(40),
                     Constraint::Percentage(40)
                 ].as_ref()
-            ).split(frame.size());
+            ).split(area);
 
         let registers = self.get_registers();
         let block = Paragraph::new(registers)
@@ -78,7 +220,7 @@ impl RailTerminalUI {
                 ],
                 15 => vec![
                     Span::raw("IO:  "),
-                    Span::styled(Self::hex_str(value), Style::default().fg(Color::Yellow)),
+                    Span::styled(Self::hex_str(value), Style::default().fg(Color::LightYellow)),
                 ],
                 _ => vec! [Span::raw("")],
             };
