@@ -3,7 +3,7 @@ pub struct RasmDictionary { }
 
 impl RasmDictionary {
 
-    pub fn translate(token: &str) -> (bool, u8) {
+    pub fn translate(token: &str) -> Result<u8, String> {
         let value = match token {
                 // REGISTERS //
             "R0" => 0x00,
@@ -69,9 +69,9 @@ impl RasmDictionary {
             _ => 0xFF   // unnecessary error code
         };
         if value == 0xFF {
-            (false, 0xFF)
+            Err("Not in dictionary".to_string())
         } else {
-            (true, value)
+            Ok(value)
         }
     }
 
