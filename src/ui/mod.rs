@@ -28,45 +28,45 @@ impl RailTerminalUI {
             .direction(Direction::Vertical)
             .constraints(
                 [
-                    Constraint::Length(5),
-                    Constraint::Percentage(10),
+                    Constraint::Length(6),
                     Constraint::Percentage(70)
                 ].as_ref()
             ).split(frame.size());
 
-        self.draw_header(frame, rows[0]);
-        self.draw_widgets(frame, rows[1]);
-        self.draw_content(frame, rows[2]);
+        let top_cols = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(
+                [
+                    Constraint::Percentage(30),
+                    Constraint::Percentage(40),
+                    Constraint::Percentage(30)
+                ].as_ref()
+            ).split(rows[0]);
+
+        self.draw_level(frame, top_cols[0]);
+        self.draw_header(frame, top_cols[1]);
+        self.draw_7seg_widgets(frame, top_cols[2]);
+        self.draw_content(frame, rows[1]);
     }
 
     fn draw_header(&self, frame: &mut Frame<CrosstermBackend<io::Stdout>>, area: Rect) {
         let spans = vec![
-            Spans::from("    ___       _ __  ___           __ "),
-            Spans::from("   / _ \\___ _(_) / / _ | ________/ / "),
-            Spans::from("  / , _/ _ `/ / / / __ |/ __/ __/ _ \\"),
-            Spans::from(" /_/|_|\\_,_/_/_/ /_/ |_/_/  \\__/_//_/"),
+            Spans::from(Span::styled("    ___       _ __  ___           __ ", Style::default().fg(Color::Yellow))),
+            Spans::from(Span::styled("   / _ \\___ _(_) / / _ | ________/ / ", Style::default().fg(Color::Yellow))),
+            Spans::from(Span::styled("  / , _/ _ `/ / / / __ |/ __/ __/ _ \\", Style::default().fg(Color::Yellow))),
+            Spans::from(Span::styled(" /_/|_|\\_,_/_/_/ /_/ |_/_/  \\__/_//_/", Style::default().fg(Color::Yellow))),
             Spans::from(""),
         ];
         let block = Paragraph::new(spans)
             .alignment(Alignment::Center)
             .block(Block::default()
-                .borders(Borders::BOTTOM));
+                .border_style(Style::default().fg(Color::Yellow))
+                .borders(Borders::BOTTOM | Borders::TOP));
 
         frame.render_widget(block, area);
     }
 
-    fn draw_widgets(&self, frame: &mut Frame<CrosstermBackend<io::Stdout>>, area: Rect) {
-        let columns = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints(
-                [
-                    Constraint::Percentage(50),
-                    Constraint::Percentage(50)
-                ].as_ref()
-            ).split(area);
-
-        self.draw_level(frame, columns[0]);
-
+    fn draw_7seg_widgets(&self, frame: &mut Frame<CrosstermBackend<io::Stdout>>, area: Rect) {
         let display_columns = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(
@@ -76,7 +76,7 @@ impl RailTerminalUI {
                     Constraint::Percentage(25),
                     Constraint::Percentage(25)
                 ].as_ref()
-            ).split(columns[1]);
+            ).split(area);
 
         for d_reg_num in 10..14 {
             self.draw_7_seg(frame, display_columns[d_reg_num - 10],
@@ -88,6 +88,8 @@ impl RailTerminalUI {
         let segments = Self::get_segs_for_byte(value);
 
         let spans = vec![
+            Spans::from(""),
+            Spans::from(""),
             Spans::from(Span::styled(segments[0].clone(), Style::default().fg(Color::Red))),
             Spans::from(Span::styled(segments[1].clone(), Style::default().fg(Color::Red))),
             Spans::from(Span::styled(segments[2].clone(), Style::default().fg(Color::Red)))
@@ -147,6 +149,8 @@ impl RailTerminalUI {
         }
 
         let spans = vec![
+            Spans::from(""),
+            Spans::from(""),
             Spans::from(""),
             Spans::from(spans),
             Spans::from("")
@@ -211,7 +215,7 @@ impl RailTerminalUI {
                     Span::styled(Self::hex_str(value), Style::default().fg(Color::Blue)),
                 ],
                 10..=13 => vec![
-                    Span::raw(format!("D{}: ", i)),
+                    Span::raw(format!("D{} : ", i - 10)),
                     Span::styled(Self::hex_str(value), Style::default().fg(Color::Blue)),
                 ],
                 14 => vec![
