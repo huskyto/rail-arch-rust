@@ -73,7 +73,7 @@ impl RailInstructionBlock {
             // 8, 9, 10, 11
             12 => RailInstruction::RANSetSeed,
             13 => RailInstruction::RANNext,
-            // 14
+            14 => RailInstruction::Halt,
             15 => RailInstruction::Noop,
             _ => RailInstruction::None
         }

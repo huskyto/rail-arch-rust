@@ -16,7 +16,9 @@ pub struct RailSystem {
     call_stack_ptr: u8,
     gen_stack: [u8; 128],
     gen_stack_ptr: u8,
-    ran_seed: u8
+    ran_seed: u8,
+
+    is_halted: bool
 }
 
 pub trait RailSystemTrait {
@@ -29,6 +31,7 @@ pub trait RailSystemTrait {
     fn get_call_stack_ptr(&self) -> u8;
     fn get_gen_stack_slice(&self, start: u8, end: u8) -> &[u8];
     fn get_gen_stack_ptr(&self) -> u8;
+    fn is_halted(&self) -> bool;
     fn set_io_print(&mut self, print: bool);
 
     fn load_program(&mut self, program_slice: &[u8]);
@@ -81,6 +84,10 @@ impl RailSystemTrait for RailSystem {
         self.program[..program_slice.len()].copy_from_slice(program_slice);
     }
 
+    fn is_halted(&self) -> bool {
+        self.is_halted
+    }
+
 }
 
 impl RailSystem {
@@ -94,7 +101,8 @@ impl RailSystem {
             call_stack_ptr: 0xFF,
             gen_stack: [0; 128],
             gen_stack_ptr: 0xFF,
-            ran_seed: 0
+            ran_seed: 0,
+            is_halted: false
         };
         new_system.registers[15].set_is_io(true);
         new_system
@@ -154,6 +162,9 @@ impl RailSystem {
                 noop_flag = true; 0 // should not update anything
             },
             RailInstruction::RANNext => self.ran_next(),
+            RailInstruction::Halt => {
+                self.is_halted = true; 0
+            }
             RailInstruction::Noop => {
                 noop_flag = true; 0 // noop
             }

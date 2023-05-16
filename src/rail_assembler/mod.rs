@@ -212,6 +212,13 @@ impl RailAssembler {
                 }
             }
         }
+        else if op.contains("HALT") {
+            if parts.len() == 1 {
+                for _ in 0..3 {
+                    parts.push(String::from("0"));
+                }
+            }
+        }
         else if op.starts_with("!ST<") {
             let mut expansion = Vec::new();
             for i in 1..parts.len() {

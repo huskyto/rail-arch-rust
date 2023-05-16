@@ -66,6 +66,9 @@ impl RasmDictionary {
             "MOV" => 0x40,   //0x00,
             "JMP" => 0x26,
 
+                // V2 //
+            "HALT" => 0x0E,
+
             _ => 0xFF   // unnecessary error code
         };
         if value == 0xFF {

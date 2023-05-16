@@ -1,7 +1,7 @@
 
 pub enum RailInstruction {
     //ALU
-    Add, Sub, And, Or, Not, Xor, Shl, Shr, RANSetSeed, RANNext, Noop,
+    Add, Sub, And, Or, Not, Xor, Shl, Shr, RANSetSeed, RANNext, Halt, Noop,
     // CU
     Equals, NotEquals, LessThan, LessEqualThan, MoreThan, MoreEqualThan, True, False,
     // RAM

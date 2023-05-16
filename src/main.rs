@@ -118,6 +118,7 @@ fn main() {
 
             for _i in 0..steps {
                 ui.rail_system.step();
+                if ui.rail_system.is_halted() { break }
                 terminal.draw(|f| {
                     ui.draw(f);
                 }).expect("Error drawing to terminal");
@@ -130,6 +131,7 @@ fn main() {
             rail_system.set_io_print(true);
             for _i in 0..steps {
                 rail_system.step();
+                if rail_system.is_halted() { break }
                 sleep(Duration::from_millis(delay));
             }
         }
