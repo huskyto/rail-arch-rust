@@ -72,15 +72,27 @@ impl RailAssembler {
                 }
                 else {
                     let parts = Self::get_parts(&code);
-                    let parts = if is_v2 {
+                    let (parts, add_parts) = if is_v2 {
                         Self::preprocess_parts(parts)
                     }
                     else {
                         Self::materialize_parts(parts)
                     };
-                    result.push(RasmLine::new(comment.to_string(), RasmTag::None,
+                    if !parts.is_empty() {
+                        result.push(RasmLine::new(comment.to_string(), RasmTag::None,
                                               LineType::Code, EMPTY, parts,
                                               line_number, line));
+                    }
+                    match add_parts {
+                        Some(ext_parts) => {
+                            for ext_part in ext_parts {
+                                result.push(RasmLine::new(comment.to_string(), RasmTag::None,
+                                                      LineType::Code, EMPTY, ext_part,
+                                                      line_number, line));
+                            }
+                        },
+                        None => { },
+                    }
                 }
             }
         }
@@ -96,18 +108,18 @@ impl RailAssembler {
         parts
     }
 
-    fn materialize_parts(parts: Vec<&str>) -> Vec<String> {
+    fn materialize_parts(parts: Vec<&str>) -> (Vec<String>, Option<Vec<Vec<String>>>) {
         let mut res = Vec::new();
         for part in parts {
             res.push(String::from(part));
         }
 
-        res
+        (res, None)
     }
 
-    fn preprocess_parts(parts: Vec<&str>) -> Vec<String> {
+    fn preprocess_parts(parts: Vec<&str>) -> (Vec<String>, Option<Vec<Vec<String>>>) {
         if parts.len() == 0 {
-            return Vec::new();
+            return (Vec::new(), None);
         }
 
         let mut res = Vec::new();
@@ -141,20 +153,17 @@ impl RailAssembler {
             None => { },
         }
 
-        match parts.get(3) {
-            Some(p) => {
-                let part = p.to_string();
-                res.push(part);
-            },
-            None => { },
+        for p in 3..parts.len() {
+            res.push(parts[p].to_string());
         }
 
         res.insert(0, op);
         Self::preprocess_expand(res)
     }
 
-    fn preprocess_expand(mut parts: Vec<String>) -> Vec<String> {
+    fn preprocess_expand(mut parts: Vec<String>) -> (Vec<String>, Option<Vec<Vec<String>>>) {
         let op = parts.get(0).unwrap();
+        let mut opt = None;
             // TODO: should be a better way to do this, without doing it manually. But can wait.
         if op.contains("JMP") {
             if parts.len() == 2 {
@@ -189,8 +198,40 @@ impl RailAssembler {
                 }
             }
         }
+        else if op.contains("S_POP") {
+            if parts.len() == 2 {
+                for _ in 0..2 {
+                    parts.insert(1, String::from("0"));
+                }
+            }
+        }
+        else if op.contains("S_PUSH") {
+            if parts.len() == 2 {
+                for _ in 0..2 {
+                    parts.push(String::from("0"));
+                }
+            }
+        }
+        else if op.starts_with("!ST<") {
+            let mut expansion = Vec::new();
+            for i in 1..parts.len() {
+                expansion.push(vec![String::from("S_PUSH+IM1"), parts[i].to_string(),
+                                    String::from("0"), String::from("0")]);
+            }
+            parts.clear();
+            opt = Some(expansion);
+        }
+        else if op.starts_with("!ST>") {
+            let mut expansion = Vec::new();
+            for i in (1..parts.len()).rev() {
+                expansion.push(vec![String::from("S_POP"), String::from("0"),
+                                    String::from("0"), parts[i].to_string()]);
+            }
+            parts.clear();
+            opt = Some(expansion);
+        }
 
-        parts
+        (parts, opt)
     }
 
     fn process_lines(&self, lines: &Vec<RasmLine>) -> Vec<u8> {
