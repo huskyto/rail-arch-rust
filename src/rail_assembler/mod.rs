@@ -9,6 +9,7 @@ pub mod rasm_dictionary;
 
 
 const EMPTY: &[&str] = &[];
+const EMPTY_VEC: Vec<String> = Vec::new();
 const LABEL: &str = "LABEL";
 const CONST: &str = "CONST";
 
@@ -35,14 +36,18 @@ impl RailAssembler {
         let lines: Vec<&str> = text.split('\n').collect();
         let mut result: Vec<RasmLine> = Vec::new();
         let mut line_number: u32 = 0;
+        let mut is_v2 = false;
 
 
         for line in lines {
             line_number += 1;
             let (code, comment) = self.extract_comment(line);
             if code.is_empty() {
+                if comment.contains("&rail-asm-v2") {
+                    is_v2 = true;
+                }
                 result.push(RasmLine::new(comment.to_string(), RasmTag::None,
-                                          LineType::Empty, EMPTY, EMPTY,
+                                          LineType::Empty, EMPTY, EMPTY_VEC,
                                           line_number, line));
             }
             else {
@@ -53,7 +58,7 @@ impl RailAssembler {
                         println!("Label has no value");
                     }
                     result.push(RasmLine::new(comment.to_string(), RasmTag::Label,
-                                              LineType::Tag, &parts[1..2], EMPTY,
+                                              LineType::Tag, &parts[1..2], EMPTY_VEC,
                                               line_number, line));
                 }
                 else if code.starts_with(CONST) {
@@ -62,13 +67,19 @@ impl RailAssembler {
                         println!("Incomplete Const");
                     }
                     result.push(RasmLine::new(comment.to_string(), RasmTag::Const,
-                                              LineType::Tag, &parts[1..3], EMPTY,
+                                              LineType::Tag, &parts[1..3], EMPTY_VEC,
                                               line_number, line));
                 }
                 else {
                     let parts = Self::get_parts(&code);
+                    let parts = if is_v2 {
+                        Self::preprocess_parts(parts)
+                    }
+                    else {
+                        Self::materialize_parts(parts)
+                    };
                     result.push(RasmLine::new(comment.to_string(), RasmTag::None,
-                                              LineType::Code, EMPTY, &parts,
+                                              LineType::Code, EMPTY, parts,
                                               line_number, line));
                 }
             }
@@ -82,6 +93,103 @@ impl RailAssembler {
             .map(|cd| cd.trim())
             .filter(|cd| !cd.is_empty())
             .collect();
+        parts
+    }
+
+    fn materialize_parts(parts: Vec<&str>) -> Vec<String> {
+        let mut res = Vec::new();
+        for part in parts {
+            res.push(String::from(part));
+        }
+
+        res
+    }
+
+    fn preprocess_parts(parts: Vec<&str>) -> Vec<String> {
+        if parts.len() == 0 {
+            return Vec::new();
+        }
+
+        let mut res = Vec::new();
+        let mut op = String::from(parts[0]);
+
+        match parts.get(1) {
+            Some(p) => {
+                let part = if p.starts_with('*') {
+                    op.push_str("+IM1");
+                    p.replacen('*', "", 1)
+                }
+                else {
+                    p.to_string()
+                };
+                res.push(part);
+            },
+            None => { },
+        }
+
+        match parts.get(2) {
+            Some(p) => {
+                let part = if p.starts_with('*') {
+                    op.push_str("+IM2");
+                    p.replacen('*', "", 1)
+                }
+                else {
+                    p.to_string()
+                };
+                res.push(part);
+            },
+            None => { },
+        }
+
+        match parts.get(3) {
+            Some(p) => {
+                let part = p.to_string();
+                res.push(part);
+            },
+            None => { },
+        }
+
+        res.insert(0, op);
+        Self::preprocess_expand(res)
+    }
+
+    fn preprocess_expand(mut parts: Vec<String>) -> Vec<String> {
+        let op = parts.get(0).unwrap();
+            // TODO: should be a better way to do this, without doing it manually. But can wait.
+        if op.contains("JMP") {
+            if parts.len() == 2 {
+                for _ in 0..2 {
+                    parts.insert(1, String::from("0"));
+                }
+            }
+        }
+        else if op.contains("MOV") {
+            if parts.len() == 3 {
+                parts.insert(2, String::from("0"));
+            }
+        }
+        else if op.contains("NOOP") {
+            if parts.len() == 1 {
+                for _ in 0..3 {
+                    parts.push(String::from("0"));
+                }
+            }
+        }
+        else if op.contains("CALL") {
+            if parts.len() == 2 {
+                for _ in 0..2 {
+                    parts.push(String::from("0"));
+                }
+            }
+        }
+        else if op.contains("RET") {
+            if parts.len() == 1 {
+                for _ in 0..3 {
+                    parts.push(String::from("0"));
+                }
+            }
+        }
+
         parts
     }
 
