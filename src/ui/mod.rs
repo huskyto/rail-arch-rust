@@ -17,6 +17,14 @@ pub struct RailTerminalUI {
 
 impl RailTerminalUI {
 
+    const MEM_LEFT_PAD: usize = 0;
+    const MEM_MIDDLE_PAD: usize = 0;
+    const MEM_RIGHT_PAD: usize = 2;
+    const MEM_WIDTH: u16 = (Self::MEM_LEFT_PAD + 6 + 22 + Self::MEM_MIDDLE_PAD + Self::MEM_RIGHT_PAD + 2) as u16;
+    const S_MEM_WIDHT: u16 = (Self::MEM_LEFT_PAD + 2 + 11 + Self::MEM_RIGHT_PAD + 2) as u16;
+
+    const REG_WIDTH: u16 = 11;
+
     pub fn new(rail_system: RailSystem) -> RailTerminalUI {
         RailTerminalUI {
             rail_system
@@ -170,60 +178,84 @@ impl RailTerminalUI {
 
     fn draw_content(&self, frame: &mut Frame<CrosstermBackend<io::Stdout>>, area: Rect) {
             // TODO check if content will not fit and display somehow
-        let columns = Layout::default()
+        let main_columns = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(
                 [
-                    Constraint::Percentage(20),
-                    Constraint::Percentage(40),
-                    Constraint::Percentage(40)
+                    Constraint::Length(Self::REG_WIDTH),
+                    Constraint::Min(10),
                 ].as_ref()
             ).split(area);
+        // min heigh for display : 34
+
+        let mem_columns = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(
+                [
+                    Constraint::Length(Self::MEM_WIDTH),
+                    Constraint::Length(Self::MEM_WIDTH),
+                    Constraint::Length(Self::S_MEM_WIDHT),
+                    // Constraint::Percentage(50),
+                    Constraint::Percentage(50)
+                ].as_ref()
+            ).split(main_columns[1]);
 
         let registers = self.get_registers();
         let block = Paragraph::new(registers)
             .block(Block::default().borders(Borders::ALL).title("Registers"));
-        frame.render_widget(block, columns[0]);
+        frame.render_widget(block, main_columns[0]);
 
         let program = self.get_program();
         let block = Paragraph::new(program)
             .block(Block::default().borders(Borders::ALL).title("Program"));
-        frame.render_widget(block, columns[1]);
+        frame.render_widget(block, mem_columns[0]);
 
         let ram = self.get_ram();
         let block = Paragraph::new(ram)
             .block(Block::default().borders(Borders::ALL).title("RAM"));
-        frame.render_widget(block, columns[2]);
+        frame.render_widget(block, mem_columns[1]);
+
+        let call_stack = self.get_call_stack();
+        let block = Paragraph::new(call_stack)
+            .block(Block::default().borders(Borders::ALL).title("Call Stack"));
+        frame.render_widget(block, mem_columns[2]);
+
+        let gen_stack = self.get_gen_stack();
+        let block = Paragraph::new(gen_stack)
+            .block(Block::default().borders(Borders::ALL).title("Gen Stack"));
+        frame.render_widget(block, mem_columns[3]);
     }
 
     fn get_registers(&self) -> Vec<Spans> {
         let mut spans = Vec::new();
+        spans.push(Spans::from(vec! [Span::raw("")]));
+
         for i in 0..16 {
             let value = self.rail_system.get_register_value(i);
             let span_vec = match i {
                 0..=7 =>
                     vec![
-                        Span::raw(format!("R{}:  ", i)),
+                        Span::raw(format!(" R{}:  ", i)),
                         Span::styled(Self::hex_str(value), Style::default().fg(Color::Blue)),
                     ],
                 8 => vec![
-                    Span::raw("BZ0: "),
+                    Span::raw(" BZ0: "),
                     Span::styled(Self::hex_str(value), Style::default().fg(Color::Blue)),
                 ],
                 9 => vec![
-                    Span::raw("LV0: "),
+                    Span::raw(" LV0: "),
                     Span::styled(Self::hex_str(value), Style::default().fg(Color::Blue)),
                 ],
                 10..=13 => vec![
-                    Span::raw(format!("D{} : ", i - 10)),
+                    Span::raw(format!(" D{} : ", i - 10)),
                     Span::styled(Self::hex_str(value), Style::default().fg(Color::Blue)),
                 ],
                 14 => vec![
-                    Span::raw("CNT: "),
+                    Span::raw(" CNT: "),
                     Span::styled(Self::hex_str(value), Style::default().fg(Color::Green)),
                 ],
                 15 => vec![
-                    Span::raw("IO:  "),
+                    Span::raw(" IO:  "),
                     Span::styled(Self::hex_str(value), Style::default().fg(Color::LightYellow)),
                 ],
                 _ => vec! [Span::raw("")],
@@ -242,10 +274,10 @@ impl RailTerminalUI {
             let slice_right = self.rail_system.get_program_slice((line * 4) + 128, (line * 4) + 3 + 128);
             let mut is_exec_line = cnt / 4 == line;
             let mut line_vec = Vec::new();
-            line_vec.push(Span::raw(" ".repeat(4)));   // left pad
+            line_vec.push(Span::raw(" ".repeat(Self::MEM_LEFT_PAD)));   // left pad
 
             line_vec.push(Self::make_span(is_exec_line, slice_left));
-            line_vec.push(Span::raw(" ".repeat(3)));   // middle pad
+            line_vec.push(Span::raw(" ".repeat(Self::MEM_MIDDLE_PAD)));   // middle pad
 
             is_exec_line = cnt / 4 == line + 32;
             line_vec.push(Self::make_span(is_exec_line, slice_right));
@@ -262,10 +294,52 @@ impl RailTerminalUI {
             let slice_left = self.rail_system.get_ram_slice(line * 4, (line * 4) + 3);
             let slice_right = self.rail_system.get_ram_slice((line * 4) + 128, (line * 4) + 3 + 128);
             let line_vec = vec![
-                Span::raw(" ".repeat(4)),  // left pad
+                Span::raw(" ".repeat(Self::MEM_LEFT_PAD)),  // left pad
                 Self::make_span(false, slice_left),
-                Span::raw(" ".repeat(3)),   // middle pad
+                Span::raw(" ".repeat(Self::MEM_MIDDLE_PAD)),   // middle pad
                 Self::make_span(false, slice_right)];
+
+            spans.push(Spans::from(line_vec));
+        }
+
+        spans
+    }
+
+    fn get_call_stack(&self) -> Vec<Spans> {
+        let mut spans = Vec::new();
+        let ptr = self.rail_system.get_call_stack_ptr();
+        for line in 0..32 {
+            let slice = self.rail_system.get_call_stack_slice(line * 4, (line * 4) + 3);
+
+            let local_ptr = if ptr / 4 == line { ptr - (line * 4) }
+            else { 5 };
+
+            let mut line_vec = Vec::new();
+            line_vec.push(Span::raw(" ".repeat(2)));
+            line_vec.push(Span::raw(" ".repeat(Self::MEM_LEFT_PAD)));
+            let mut val_spans = Self::make_stack_span(local_ptr, slice);
+            line_vec.append(&mut val_spans);
+
+            spans.push(Spans::from(line_vec));
+        }
+
+        spans
+    }
+
+    fn get_gen_stack(&self) -> Vec<Spans> {
+        let mut spans = Vec::new();
+        let ptr = self.rail_system.get_gen_stack_ptr();
+        for line in 0..32 {
+            let slice = self.rail_system.get_gen_stack_slice(line * 4, (line * 4) + 3);
+
+            let local_ptr = if ptr / 4 == line { ptr - (line * 4) }
+            else { 5 };
+
+            let mut line_vec = Vec::new();
+            line_vec.push(Span::raw(" ".repeat(2)));
+            line_vec.push(Span::raw(" ".repeat(Self::MEM_LEFT_PAD)));
+            let mut val_spans = Self::make_stack_span(local_ptr, slice);
+            line_vec.append(&mut val_spans);
 
             spans.push(Spans::from(line_vec));
         }
@@ -283,6 +357,20 @@ impl RailTerminalUI {
         else {
             Span::raw(format!("   {}", values))
         }
+    }
+
+    fn make_stack_span(local_ptr: u8, slice: &[u8]) -> Vec<Span> {
+        let mut res = Vec::new();
+        for i in 0..4 {
+            if i == local_ptr {
+                res.push(Span::styled(format!("{} ", Self::hex_str(slice[i as usize])), Style::default().fg(Color::Green)));
+            }
+            else {
+                res.push(Span::raw(format!("{} ", Self::hex_str(slice[i as usize]))));
+            }
+        }
+
+        res
     }
 
     fn hex_str(byte: u8) -> String {
