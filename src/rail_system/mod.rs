@@ -12,7 +12,10 @@ pub struct RailSystem {
     registers: [RailRegister; 16],
     ram: [u8; 256],
     program: [u8; 256],
-    call_stack: Vec<u8>,
+    call_stack: [u8; 128],
+    call_stack_ptr: u8,
+    gen_stack: [u8; 128],
+    gen_stack_ptr: u8,
     ran_seed: u8
 }
 
@@ -22,6 +25,10 @@ pub trait RailSystemTrait {
     fn get_cnt_register_value(&self) -> u8;
     fn get_program_slice(&self, start: u8, end: u8) -> &[u8];
     fn get_ram_slice(&self, start: u8, end: u8) -> &[u8];
+    fn get_call_stack_slice(&self, start: u8, end: u8) -> &[u8];
+    fn get_call_stack_ptr(&self) -> u8;
+    fn get_gen_stack_slice(&self, start: u8, end: u8) -> &[u8];
+    fn get_gen_stack_ptr(&self) -> u8;
     fn set_io_print(&mut self, print: bool);
 
     fn load_program(&mut self, program_slice: &[u8]);
@@ -50,6 +57,22 @@ impl RailSystemTrait for RailSystem {
         &self.ram[start as usize ..=end as usize]
     }
 
+    fn get_call_stack_slice(&self, start: u8, end: u8) -> &[u8] {
+        &self.call_stack[start as usize ..=end as usize]
+    }
+
+    fn get_call_stack_ptr(&self) -> u8 {
+        self.call_stack_ptr
+    }
+
+    fn get_gen_stack_slice(&self, start: u8, end: u8) -> &[u8] {
+        &self.gen_stack[start as usize ..=end as usize]
+    }
+
+    fn get_gen_stack_ptr(&self) -> u8 {
+        self.gen_stack_ptr
+    }
+
     fn set_io_print(&mut self, print: bool) {
         self.registers[15].set_is_io(print);
     }
@@ -57,6 +80,7 @@ impl RailSystemTrait for RailSystem {
     fn load_program(&mut self, program_slice: &[u8]) {
         self.program[..program_slice.len()].copy_from_slice(program_slice);
     }
+
 }
 
 impl RailSystem {
@@ -66,7 +90,10 @@ impl RailSystem {
             registers: [RailRegister::new(); 16],
             ram: [0; 256],
             program: [0; 256],
-            call_stack: Vec::new(),
+            call_stack: [0; 128],
+            call_stack_ptr: 0xFF,
+            gen_stack: [0; 128],
+            gen_stack_ptr: 0xFF,
             ran_seed: 0
         };
         new_system.registers[15].set_is_io(true);
@@ -163,14 +190,20 @@ impl RailSystem {
         match op {
             RailInstruction::Read  => target_reg.set_value(self.ram[addr]),
             RailInstruction::Write => self.ram[addr] = self.registers[source as usize].get_value(),
-            RailInstruction::SPop  => { },//TODO(),
-            RailInstruction::SPush => { },//TODO(),
+            RailInstruction::SPop  => {
+                let value = self.pop_gen_stack();
+                self.registers[target as usize].set_value(value)
+            },
+            RailInstruction::SPush => {
+                let value = self.registers[source as usize].get_value();
+                self.push_gen_stack(value);
+            },
             RailInstruction::Ret => {
-                let cnt = self.call_stack.pop().unwrap();
+                let cnt = self.pop_call_stack();
                 self.get_cnt_register_mut().set_value(cnt)
             },
             RailInstruction::Call => {
-                self.call_stack.push(self.get_cnt_register_value());  //already moved to next in step
+                self.push_call_stack(self.get_cnt_register_value());  //already moved to next in step
                 self.get_cnt_register_mut().set_value(source)
             },
             RailInstruction::None => {} //noop
@@ -216,6 +249,28 @@ impl RailSystem {
         else {
             self.registers [instruction.arg2 as usize].get_value()
         }
+    }
+
+    fn push_call_stack(&mut self, value: u8) {
+        self.call_stack_ptr = self.call_stack_ptr.wrapping_add(1);
+        self.call_stack[self.call_stack_ptr as usize] = value;
+    }
+
+    fn pop_call_stack(&mut self) -> u8 {
+        let res = self.call_stack[self.call_stack_ptr as usize];
+        self.call_stack_ptr = self.call_stack_ptr.wrapping_sub(1);
+        res
+    }
+
+    fn push_gen_stack(&mut self, value: u8) {
+        self.gen_stack_ptr = self.gen_stack_ptr.wrapping_add(1);
+        self.gen_stack[self.gen_stack_ptr as usize] = value;
+    }
+
+    fn pop_gen_stack(&mut self) -> u8 {
+        let res = self.gen_stack[self.gen_stack_ptr as usize];
+        self.gen_stack_ptr = self.gen_stack_ptr.wrapping_sub(1);
+        res
     }
 
 }
